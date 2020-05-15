@@ -49,7 +49,7 @@ class MyHomePage extends StatefulWidget {
   _MyHomePageState createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
+class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   final List<Transaction> _userTransaction = [
 //    Transaction(
 //        id: "t1", title: "New Shoes", amount: 99.99, date: DateTime.now()),
@@ -59,6 +59,26 @@ class _MyHomePageState extends State<MyHomePage> {
 //        amount: 17.99,
 //        date: DateTime.now()),
   ];
+
+  bool _showChart = false;
+
+  @override
+  void initState() {
+    WidgetsBinding.instance.addObserver(this);
+    super.initState();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    print(state);
+  }
+
+  @override
+  void dispose(){
+    print("App dispose()");
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
 
   List<Transaction> get _recentTransaction {
     return _userTransaction.where((item) {
@@ -100,7 +120,50 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
-  bool _showChart = false;
+  List<Widget> _buildLandscapeContent(MediaQueryData mediaQuery,
+      PreferredSizeWidget appBar, Widget transactionListWidget) {
+    return [
+      Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          Text(
+            "Show Chart",
+            style: Theme.of(context).textTheme.title,
+          ),
+          Switch.adaptive(
+            activeColor: Theme.of(context).accentColor,
+            value: _showChart,
+            onChanged: (isChecked) {
+              setState(() {
+                _showChart = isChecked;
+              });
+            },
+          ),
+        ],
+      ),
+      _showChart
+          ? Container(
+              height: (mediaQuery.size.height -
+                      appBar.preferredSize.height -
+                      mediaQuery.padding.top) *
+                  0.7,
+              child: Chart(_recentTransaction))
+          : transactionListWidget
+    ];
+  }
+
+  List<Widget> _buildPortraitContent(MediaQueryData mediaQuery,
+      PreferredSizeWidget appBar, Widget transactionListWidget) {
+    return [
+      Container(
+          height: (mediaQuery.size.height -
+                  appBar.preferredSize.height -
+                  mediaQuery.padding.top) *
+              0.3,
+          child: Chart(_recentTransaction)),
+      transactionListWidget
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -148,38 +211,11 @@ class _MyHomePageState extends State<MyHomePage> {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: <Widget>[
             if (isLandspcape)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  Text("Show Chart", style: Theme.of(context).textTheme.title,),
-                  Switch.adaptive(
-                    activeColor: Theme.of(context).accentColor,
-                    value: _showChart,
-                    onChanged: (isChecked) {
-                      setState(() {
-                        _showChart = isChecked;
-                      });
-                    },
-                  ),
-                ],
-              ),
+              ..._buildLandscapeContent(
+                  mediaQuery, appBar, transactionListWidget),
             if (!isLandspcape)
-              Container(
-                  height: (mediaQuery.size.height -
-                          appBar.preferredSize.height -
-                          mediaQuery.padding.top) *
-                      0.3,
-                  child: Chart(_recentTransaction)),
-            if (!isLandspcape) transactionListWidget,
-            if (isLandspcape)
-              _showChart
-                  ? Container(
-                      height: (mediaQuery.size.height -
-                              appBar.preferredSize.height -
-                              mediaQuery.padding.top) *
-                          0.7,
-                      child: Chart(_recentTransaction))
-                  : transactionListWidget,
+              ..._buildPortraitContent(
+                  mediaQuery, appBar, transactionListWidget),
           ],
         ),
       ),
